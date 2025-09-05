@@ -1,0 +1,16 @@
+[
+  {
+    "nombre": "tarea1",
+    "duracion": 1,
+    "deadline": "2025-09-04T15:15",
+    "prioridad": "alta",
+    "categoria": "universidad"
+  },
+  {
+    "nombre": "Estudiar Redes",
+    "duracion": 120,
+    "deadline": "2025-09-10T23:59",
+    "prioridad": "alta",
+    "categoria": "universidad"
+  }
+]
