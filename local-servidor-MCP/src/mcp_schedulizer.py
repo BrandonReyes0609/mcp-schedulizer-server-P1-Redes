@@ -1,16 +1,12 @@
-"""
-Servidor MCP-Schedulizer con manejo robusto de archivo JSON
------------------------------------------------------------
-Evita error si 'tasks_db.json' está vacío o dañado.
-"""
-
 from flask import Flask, request, jsonify
 import json
 from datetime import datetime, timedelta
 import os
+import csv
 
 app = Flask(__name__)
 TASKS_FILE = "tasks_db.json"
+EXPORT_FILE = "agenda_exportada.csv"
 
 def load_tasks():
     if not os.path.exists(TASKS_FILE):
@@ -38,20 +34,24 @@ def add_task(params):
     return {"status": "tarea agregada correctamente", "tareas_totales": len(tasks)}
 
 def list_tasks(_params):
-    tasks = load_tasks()
-    return {"tareas": tasks}
+    return {"tareas": load_tasks()}
 
 def remove_task(params):
-    nombre = params.get("nombre")
+    id_tarea = params.get("id")
     tasks = load_tasks()
-    nuevas = [t for t in tasks if t["nombre"] != nombre]
-    if len(nuevas) == len(tasks):
-        return {"status": f"no se encontró tarea '{nombre}'"}
-    save_tasks(nuevas)
-    return {"status": f"tarea '{nombre}' eliminada", "tareas_totales": len(nuevas)}
+    if 0 <= id_tarea < len(tasks):
+        eliminado = tasks.pop(id_tarea)
+        save_tasks(tasks)
+        return {"status": f"tarea '{eliminado['nombre']}' eliminada", "tareas_totales": len(tasks)}
+    else:
+        return {"status": "ID inválido"}
+
+def prioridad_valor(p):
+    return {"alta": 1, "media": 2, "baja": 3}.get(p.lower(), 4)
 
 def generate_schedule(params):
     tasks = load_tasks()
+    tasks.sort(key=lambda t: (datetime.fromisoformat(t["deadline"]), prioridad_valor(t["prioridad"])))
     fecha_inicio = datetime.fromisoformat(params.get("fecha_inicio"))
     disponibilidad = params.get("disponibilidad", 240)
     schedule = []
@@ -70,11 +70,23 @@ def generate_schedule(params):
         dia += timedelta(days=1)
     return {"agenda": schedule}
 
+def export_schedule(_params=None):
+    result = generate_schedule({
+        "fecha_inicio": datetime.today().strftime("%Y-%m-%dT08:00"),
+        "disponibilidad": 240
+    })
+    with open(EXPORT_FILE, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["fecha", "hora_inicio", "hora_fin", "tarea"])
+        writer.writeheader()
+        for row in result["agenda"]:
+            writer.writerow(row)
+    return {"status": "Agenda exportada correctamente."}
+
 @app.route("/", methods=["POST"])
 def handle_rpc():
-    request_json = request.get_json()
-    method = request_json.get("method")
-    params = request_json.get("params", {})
+    req = request.get_json()
+    method = req.get("method")
+    params = req.get("params", {})
 
     if method == "add_task":
         result = add_task(params)
@@ -84,13 +96,15 @@ def handle_rpc():
         result = generate_schedule(params)
     elif method == "remove_task":
         result = remove_task(params)
+    elif method == "export_schedule":
+        result = export_schedule()
     else:
         return jsonify({"error": "Método no soportado"}), 400
 
     return jsonify({
         "jsonrpc": "2.0",
         "result": result,
-        "id": request_json.get("id")
+        "id": req.get("id")
     })
 
 if __name__ == "__main__":

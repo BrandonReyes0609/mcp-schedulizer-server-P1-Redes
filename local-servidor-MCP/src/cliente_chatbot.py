@@ -1,6 +1,6 @@
 """
-Cliente chatbot para interactuar con el servidor MCP-Schedulizer
-Envia comandos JSON-RPC a http://localhost:8000/
+Cliente chatbot para interactuar con el servidor MCP-Schedulizer.
+Incluye eliminación por ID y exportación de agenda.
 """
 
 import json
@@ -25,13 +25,14 @@ def menu():
     print("1. Agregar tarea")
     print("2. Listar tareas")
     print("3. Generar horario")
-    print("4. Eliminar tarea")
-    print("5. Salir")
+    print("4. Eliminar tarea por ID")
+    print("5. Exportar agenda")
+    print("6. Salir")
 
 def main():
     while True:
         menu()
-        opcion = input("\nSelecciona una opción (1-5): ")
+        opcion = input("\nSelecciona una opción (1-6): ")
 
         if opcion == "1":
             nombre = input("Nombre de la tarea: ")
@@ -39,7 +40,6 @@ def main():
             deadline = input("Fecha límite (YYYY-MM-DDTHH:MM): ")
             prioridad = input("Prioridad (alta/media/baja): ")
             categoria = input("Categoría: ")
-
             resultado = enviar_rpc("add_task", {
                 "nombre": nombre,
                 "duracion": duracion,
@@ -52,13 +52,12 @@ def main():
         elif opcion == "2":
             resultado = enviar_rpc("list_tasks")
             print("[yellow]Tareas actuales:[/yellow]")
-            for t in resultado["result"]["tareas"]:
-                print("-", t["nombre"], "|", t["duracion"], "min | deadline:", t["deadline"])
+            for idx, t in enumerate(resultado["result"]["tareas"]):
+                print(f"{idx}. {t['nombre']} | {t['duracion']} min | deadline: {t['deadline']} | prioridad: {t['prioridad']}")
 
         elif opcion == "3":
             inicio = input("Fecha de inicio (YYYY-MM-DD): ")
             disponibilidad = int(input("Minutos disponibles por día: "))
-
             resultado = enviar_rpc("generate_schedule", {
                 "fecha_inicio": inicio + "T08:00",
                 "disponibilidad": disponibilidad
@@ -68,11 +67,16 @@ def main():
                 print(bloque["fecha"], bloque["hora_inicio"], "-", bloque["hora_fin"], "->", bloque["tarea"])
 
         elif opcion == "4":
-            nombre = input("Nombre exacto de la tarea a eliminar: ")
-            resultado = enviar_rpc("remove_task", {"nombre": nombre})
+            id_tarea = int(input("ID de la tarea a eliminar: "))
+            resultado = enviar_rpc("remove_task", {"id": id_tarea})
             print("[red]Respuesta:[/red]", resultado)
 
         elif opcion == "5":
+            resultado = enviar_rpc("export_schedule")
+            print("[blue]Exportación completada en 'agenda_exportada.csv'[/blue]")
+            print(resultado["result"]["status"])
+
+        elif opcion == "6":
             print("[bold red]Saliendo...[/bold red]")
             break
         else:
