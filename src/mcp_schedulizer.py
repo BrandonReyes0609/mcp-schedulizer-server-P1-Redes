@@ -1,111 +1,130 @@
-from flask import Flask, request, jsonify
-import json
-from datetime import datetime, timedelta
+"""
+Servidor MCP Schedulizer - Compatible con protocolo MCP 2025
+Expone herramientas bajo JSON-RPC y /tools/definition.json
+"""
+
+from flask import Flask, request, jsonify, send_from_directory
+import uuid
 import os
-import csv
+import datetime
+import json
 
 app = Flask(__name__)
-TASKS_FILE = "tasks_db.json"
-EXPORT_FILE = "agenda_exportada.csv"
 
-def load_tasks():
-    if not os.path.exists(TASKS_FILE):
-        return []
-    with open(TASKS_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+# In-memory database
+tasks = []
+calendar = []
 
-def save_tasks(tasks):
-    with open(TASKS_FILE, "w", encoding="utf-8") as f:
-        json.dump(tasks, f, indent=2, ensure_ascii=False)
+# Ruta para servir el archivo tools/definition.json
+@app.route('/tools/definition.json', methods=['GET'])
+def get_definition():
+    return send_from_directory('tools', 'definition.json')
 
-def add_task(params):
-    tasks = load_tasks()
-    tasks.append({
-        "nombre": params.get("nombre"),
-        "duracion": params.get("duracion"),
-        "deadline": params.get("deadline"),
-        "prioridad": params.get("prioridad"),
-        "categoria": params.get("categoria")
-    })
-    save_tasks(tasks)
-    return {"status": "tarea agregada correctamente", "tareas_totales": len(tasks)}
+# MCP JSON-RPC handler
+@app.route('/jsonrpc', methods=['POST'])
+def handle_jsonrpc():
+    try:
+        data = request.get_json()
 
-def list_tasks(_params):
-    return {"tareas": load_tasks()}
+        if "tool_name" not in data or "parameters" not in data:
+            return jsonify({
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid MCP call. 'tool_name' and 'parameters' required"
+                }
+            }), 400
 
-def remove_task(params):
-    id_tarea = params.get("id")
-    tasks = load_tasks()
-    if 0 <= id_tarea < len(tasks):
-        eliminado = tasks.pop(id_tarea)
-        save_tasks(tasks)
-        return {"status": f"tarea '{eliminado['nombre']}' eliminada", "tareas_totales": len(tasks)}
-    else:
-        return {"status": "ID inválido"}
+        tool_name = data["tool_name"]
+        params = data["parameters"]
+        tool_use_id = data.get("tool_use_id", str(uuid.uuid4()))
 
-def prioridad_valor(p):
-    return {"alta": 1, "media": 2, "baja": 3}.get(p.lower(), 4)
+        if tool_name == "add_task":
+            return handle_add_task(params, tool_use_id)
+        elif tool_name == "remove_task":
+            return handle_remove_task(params, tool_use_id)
+        elif tool_name == "list_tasks":
+            return handle_list_tasks(tool_use_id)
+        elif tool_name == "generate_schedule":
+            return handle_generate_schedule(params, tool_use_id)
+        elif tool_name == "get_calendar":
+            return handle_get_calendar(tool_use_id)
+        else:
+            return jsonify({
+                "error": {
+                    "code": -32001,
+                    "message": "tool_not_found"
+                }
+            }), 404
 
-def generate_schedule(params):
-    tasks = load_tasks()
-    tasks.sort(key=lambda t: (datetime.fromisoformat(t["deadline"]), prioridad_valor(t["prioridad"])))
-    fecha_inicio = datetime.fromisoformat(params.get("fecha_inicio"))
-    disponibilidad = params.get("disponibilidad", 240)
-    schedule = []
-    dia = fecha_inicio
-    for tarea in tasks:
-        duracion = int(tarea["duracion"])
-        if duracion > disponibilidad:
-            continue
-        block = {
-            "fecha": dia.strftime("%Y-%m-%d"),
-            "hora_inicio": "08:00",
-            "hora_fin": (datetime.strptime("08:00", "%H:%M") + timedelta(minutes=duracion)).strftime("%H:%M"),
-            "tarea": tarea["nombre"]
-        }
-        schedule.append(block)
-        dia += timedelta(days=1)
-    return {"agenda": schedule}
+    except Exception as e:
+        return jsonify({
+            "error": {
+                "code": -32099,
+                "message": "internal_server_error",
+                "data": str(e)
+            }
+        }), 500
 
-def export_schedule(_params=None):
-    result = generate_schedule({
-        "fecha_inicio": datetime.today().strftime("%Y-%m-%dT08:00"),
-        "disponibilidad": 240
-    })
-    with open(EXPORT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["fecha", "hora_inicio", "hora_fin", "tarea"])
-        writer.writeheader()
-        for row in result["agenda"]:
-            writer.writerow(row)
-    return {"status": "Agenda exportada correctamente."}
+# 🧩 Funciones de herramientas
 
-@app.route("/", methods=["POST"])
-def handle_rpc():
-    req = request.get_json()
-    method = req.get("method")
-    params = req.get("params", {})
+def handle_add_task(params, tool_use_id):
+    required = ["nombre", "duracion", "deadline", "prioridad", "categoria"]
+    if not all(k in params for k in required):
+        return jsonify({
+            "error": {
+                "code": -32602,
+                "message": "invalid_params",
+                "data": f"Missing fields: {', '.join(k for k in required if k not in params)}"
+            }
+        }), 400
 
-    if method == "add_task":
-        result = add_task(params)
-    elif method == "list_tasks":
-        result = list_tasks(params)
-    elif method == "generate_schedule":
-        result = generate_schedule(params)
-    elif method == "remove_task":
-        result = remove_task(params)
-    elif method == "export_schedule":
-        result = export_schedule()
-    else:
-        return jsonify({"error": "Método no soportado"}), 400
-
+    tasks.append(params)
     return jsonify({
-        "jsonrpc": "2.0",
-        "result": result,
-        "id": req.get("id")
+        "tool_use_id": tool_use_id,
+        "result": {
+            "status": "tarea agregada correctamente",
+            "tareas_totales": len(tasks)
+        }
     })
 
-if __name__ == "__main__":
-    app.run(port=8000)
+def handle_remove_task(params, tool_use_id):
+    nombre = params.get("nombre")
+    global tasks
+    tasks = [t for t in tasks if t["nombre"] != nombre]
+    return jsonify({
+        "tool_use_id": tool_use_id,
+        "result": {"status": f"tarea '{nombre}' eliminada"}
+    })
+
+def handle_list_tasks(tool_use_id):
+    return jsonify({
+        "tool_use_id": tool_use_id,
+        "result": {"tasks": tasks}
+    })
+
+def handle_generate_schedule(params, tool_use_id):
+    # Simulación básica
+    global calendar
+    calendar = []
+    fecha_inicio = datetime.datetime.fromisoformat(params["fecha_inicio"])
+    for i, task in enumerate(tasks):
+        bloque = {
+            "fecha": (fecha_inicio + datetime.timedelta(days=i)).strftime("%Y-%m-%d"),
+            "inicio": "09:00",
+            "fin": "11:00",
+            "nombre": task["nombre"]
+        }
+        calendar.append(bloque)
+    return jsonify({
+        "tool_use_id": tool_use_id,
+        "result": {"calendar": calendar}
+    })
+
+def handle_get_calendar(tool_use_id):
+    return jsonify({
+        "tool_use_id": tool_use_id,
+        "result": {"calendar": calendar}
+    })
+
+if __name__ == '__main__':
+    app.run(port=5000)

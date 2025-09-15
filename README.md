@@ -1,244 +1,219 @@
-# Readme Spanish
-
-[🔗Cick for view🔗](REAME_Spanish.md)
-
-# 📘 MCP-Schedulizer
+# 🚀 MCP-Schedulizer Integration – Project 1 (Delivery 2)
 
 ## 🎯 Project Purpose
 
-The **MCP-Schedulizer** project consists of developing a **local MCP server** that helps organize personal, academic, or work tasks.Its main function is to **generate an optimized schedule** based on the tasks registered by the user, taking into account:
-
-- ⏳ Duration
-- 📅 Deadline
-- 🔝 Priority (high, medium, low)
-- 🏷️ Category
-
-This server can be invoked by a **host chatbot** that acts as a client, offering the user a simple console interface.
+This repository contains the **second delivery** of Project 1 for the course **CC3067 – Computer Networks (UVG)**.
+It extends the **MCP-Schedulizer local server** by integrating multiple MCP servers, a connection to an LLM API (Claude), remote deployment, and network analysis using Wireshark.
 
 ---
 
 ## 📚 Project Theme
 
-The project belongs to the course **CC3067 – Computer Networks (UVG)** and is part of **Project 1: Use of an existing protocol**.
-The central idea is to learn how to **implement a local MCP server** and a client that interacts with it, applying networking protocol concepts at the **application layer** of the OSI model.
+The goal of this delivery is to **implement an existing protocol (JSON-RPC 2.0)** in different contexts:
+
+- Local MCP server (MCP-Schedulizer).
+- Integration with official MCP servers (Filesystem, Git).
+- Use of other students' MCP servers.
+- Remote MCP server deployment in the cloud.
+- Protocol analysis with Wireshark.
 
 ---
 
-## 🌐 Protocol Used
+## 🌐 Protocols Used
 
-The system is based on **JSON-RPC 2.0**, a standard protocol for **remote procedure calls (RPC)** using JSON.
-
-- **Client (chatbot)** → sends JSON-RPC requests via **HTTP POST**.
-- **Server (MCP-Schedulizer)** → receives the request, executes the method (e.g., `add_task`, `list_tasks`, `generate_schedule`) and responds with a JSON object following the protocol specification.
-
-This means the project **implements a real protocol**, combining:
-
-- **HTTP** as transport.
-- **JSON-RPC** as application protocol.
-- Aligned with **MCP (Model Context Protocol)** by Anthropic.
+- **JSON-RPC 2.0** → application layer protocol for remote procedure calls.
+- **HTTP POST** → transport mechanism.
+- **MCP (Model Context Protocol)** → specification alignment.
 
 ---
 
-## ⚙️ Implemented Features
+## ⚙️ Project Structure
 
-- **Add task** with attributes (name, duration, deadline, priority, category).
-- **List tasks** showing ID, name, duration, deadline, and priority.
-- **Generate schedule** respecting order by `deadline` and `priority`.
-- **Delete task** by **ID**.
-- **Export schedule** to a `agenda_exportada.csv` file.
+```
+mcp-integration-P1-Redes/
+│
+├── src/
+│   ├── cliente_chatbot.py     # Host chatbot (Claude + MCP + logs)
+│   ├── mcp_schedulizer.py     # Local MCP server
+│   ├── remote_server.py       # Trivial remote MCP server (cloud)
+│   └── utils/                 # Utilities (logs, context management)
+│
+├── data/
+│   ├── tasks_db.json
+│   ├── agenda_exportada.csv
+│   └── mcp_log.txt
+│
+├── docs/
+│   ├── WIRESHARK_REPORT.md    # Network analysis with Wireshark
+│   └── screenshots/           # Execution and capture images
+│
+├── tests/
+│   ├── test_schedulizer.py
+│   ├── test_integration.py
+│
+├── requirements.txt           # Python dependencies
+└── .gitignore                 # Git ignore rules
+```
+
+```
+mcp-schedulizer-integration-P1-Redes/
+│
+├── src/                         # Código fuente principal
+│   ├── cliente_chatbot.py        # Host chatbot (extendido con Claude, log, etc.)
+│   ├── mcp_schedulizer.py        # Tu servidor MCP local
+│   ├── remote_server.py          # Servidor remoto trivial para nube
+│   └── utils/                    # Funciones auxiliares (logs, contexto, etc.)
+│
+├── data/
+│   ├── tasks_db.json             # Base de datos de tareas
+│   ├── agenda_exportada.csv      # Exportación de agenda
+│   └── logs/                     # Carpeta de logs MCP
+│
+├── docs/
+│   ├── README.md                 # Instrucciones principales (en inglés)
+│   ├── README_ES.md              # Opcional: versión en español
+│   ├── WIRESHARK_REPORT.md       # Explicación análisis de red
+│   └── screenshots/              # Capturas de Wireshark, ejecución, etc.
+│
+├── tests/
+│   ├── test_schedulizer.py       # Pruebas unitarias de tu servidor
+│   ├── test_integration.py       # Pruebas de integración con otros servidores MCP
+│
+├── requirements.txt              # Dependencias Python
+├── .gitignore                    # Ignorar __pycache__, .env, etc.
+└── LICENSE (opcional)            # Si lo haces público
+
+```
+
+
+```
+mcp-schedulizer-integration-P1-Redes/
+│
+├── src/                         # Código fuente principal
+│   ├── cliente_chatbot.py        # Host chatbot (extendido con Claude, log, etc.)
+│   ├── mcp_schedulizer.py        # Tu servidor MCP local
+│   ├── remote_server.py          # Servidor remoto trivial para nube
+│   └── utils/                    # Funciones auxiliares (logs, contexto, etc.)
+│
+├── data/
+│   ├── tasks_db.json             # Base de datos de tareas
+│   ├── agenda_exportada.csv      # Exportación de agenda
+│   └── logs/                     # Carpeta de logs MCP
+│
+├── docs/
+│   ├── README.md                 # Instrucciones principales (en inglés)
+│   ├── README_ES.md              # Opcional: versión en español
+│   ├── WIRESHARK_REPORT.md       # Explicación análisis de red
+│   └── screenshots/              # Capturas de Wireshark, ejecución, etc.
+│
+├── tests/
+│   ├── test_schedulizer.py       # Pruebas unitarias de tu servidor
+│   ├── test_integration.py       # Pruebas de integración con otros servidores MCP
+│
+├── requirements.txt              # Dependencias Python
+├── .gitignore                    # Ignorar __pycache__, .env, etc.
+└── LICENSE (opcional)            # Si lo haces público
+```
+
+
+```
+/src
+ ├── cliente_chatbot.py     # Chatbot anfitrión extendido (Claude + MCP + Logs)
+ ├── mcp_schedulizer.py     # Tu servidor MCP local
+ ├── remote_server.py       # Servidor MCP remoto trivial (Entrega 2)
+ └── utils/
+      ├── log_utils.py      # Función para guardar logs
+      └── context_utils.py  # Manejo de contexto
+```
 
 ---
 
-## 🛠️ Installation and Execution
+## 🔹 Work Phases
 
-### 1. Clone the repository
+### Phase 1 – Extend the Host Chatbot
+
+- Connect Claude API.
+- Manage conversation context.
+- Log all MCP interactions.
+
+### Phase 2 – Integration with Official MCP Servers
+
+- Filesystem MCP (file creation).
+- Git MCP (create repo, README, commit).
+
+### Phase 3 – Expand MCP Ecosystem
+
+- Integrate at least **2 classmates' MCP servers**.
+- Build combined scenarios with Schedulizer.
+
+### Phase 4 – Remote Server and Network Analysis
+
+- Deploy `remote_server.py` to Google Cloud Run (or similar).
+- Capture traffic with Wireshark.
+- Classify `sync`, `request`, and `response` messages.
+
+### Phase 5 – Documentation and Final Delivery
+
+- Write final report with specifications.
+- Include Wireshark captures and OSI layer explanations.
+- Present the project in class.
+
+---
+
+## 🛠️ Installation
+
+1. Clone the repository:
 
 ```bash
 git clone <REPO_URL>
-cd mcp-schedulizer
+cd mcp-integration-P1-Redes
 ```
 
-### 2. Install dependencies
+2. Install dependencies:
 
 ```bash
-pip install flask requests rich
-```
-
-### 3. Run the server
-
-```bash
-python mcp_schedulizer.py
-```
-
-This starts the server at `http://localhost:8000/`.
-
-### 4. Run the client
-
-In another terminal:
-
-```bash
-python cliente_chatbot.py
-```
-
----
-
-## 💻 Example of Use
-
-```text
-Host Chatbot - MCP Schedulizer
-Available commands:
-1. Add task
-2. List tasks
-3. Generate schedule
-4. Delete task by ID
-5. Export schedule
-6. Exit
-
-Select an option (1-6): 1
-Task name: Study Networks
-Duration (minutes): 120
-Deadline (YYYY-MM-DDTHH:MM): 2025-09-10T23:59
-Priority (high/medium/low): high
-Category: university
+pip install -r requirements.txt
 ```
 
 ---
 
 ## ▶️ Execution
 
-### 1. Run the server
+### 1. Run the local MCP server
 
 ```bash
-python mcp_schedulizer.py
+python src/mcp_schedulizer.py
 ```
 
-Runs at `http://localhost:8000`.
-
-### 2. Run the client (host chatbot)
+### 2. Run the host chatbot
 
 ```bash
-python cliente_chatbot.py
+python src/cliente_chatbot.py
+```
+
+### 3. Run the remote MCP server (cloud deployment)
+
+```bash
+python src/remote_server.py
 ```
 
 ---
 
-## Step-by-Step Tests
+## 📤 Exported Files
 
-### Option 1: Add tasks
-
-Run option `1` and then enter:
-
-#### Task 1
-
-```
-Name: Report Review
-Duration: 45
-Deadline: 2025-09-06T18:00
-Priority: high
-Category: university
-```
-
-#### Task 2
-
-```
-Name: Do Laundry
-Duration: 30
-Deadline: 2025-09-08T20:00
-Priority: medium
-Category: personal
-```
-
-#### Task 3
-
-```
-Name: Study Networks
-Duration: 120
-Deadline: 2025-09-10T23:59
-Priority: high
-Category: university
-```
+- `agenda_exportada.csv` → generated weekly schedule.
+- `mcp_log.txt` → log of all interactions with Claude API and MCP servers.
 
 ---
 
-### Option 2: List tasks
+## ✅ Next Steps
 
-```
-Select an option (1-5): 2
-```
-
-### Option 3: Generate schedule
-
-```
-Select an option (1-5): 3
-
-Start date: 2025-09-05
-Minutes per day: 240
-```
-
-Expected result:
-
-```
-Generated schedule:
-2025-09-05 08:00 - 08:45 -> Report Review
-2025-09-06 08:00 - 08:30 -> Do Laundry
-2025-09-07 08:00 - 10:00 -> Study Networks
-```
+- Integrate Claude API connection.
+- Add official MCP servers (Filesystem, Git).
+- Connect classmates’ MCP servers.
+- Deploy remote server and capture traffic with Wireshark.
 
 ---
 
-### Option 4: Delete task
-
-```
-Select an option (1-5): 4
-Task ID to delete: 3
-```
-
-Expected result:
-
-```
-Response:
-{'status': "task 'Do Laundry' deleted", 'remaining_tasks': 2}
-```
-
----
-
-### Option 5: Exit
-
-```
-Select an option (1-5): 5
-```
-
----
-
-## OSI Layers Architecture
-
-- **Application layer:** JSON-RPC 2.0 + MCP (message format and rules).
-- **Transport layer:** HTTP (POST).
-- **Network layer:** IP (localhost in this case).
-- **Data Link and Physical layer:** OS-dependent (loopback interface).
-
----
-
-## Schedule Export
-
-With the **5** option of the client, a `agenda_exportada.csv` file is generated with the following format:
-
-```csv
-date,start_time,end_time,task
-2025-09-05,08:00,10:00,Study Networks
-2025-09-06,08:00,08:45,Report Review
-```
-
----
-
-## Conclusions
-
-- A **non-trivial local MCP server** was implemented to organize time and tasks.
-- The project demonstrates the **application of protocols at the application layer** (JSON-RPC).
-- Concepts of **automatic scheduling, priority management, and deadlines** were integrated, along with JSON file persistence.
-- The solution is **extensible**, making it possible to integrate with other chatbots and MCP agents.
-
----
-
- **Author:** Brandon Reyes Morales – Universidad del Valle de Guatemala
- **Course:** CC3067 – Computer Networks
+📌 **Author:** Brandon Reyes Morales – Universidad del Valle de Guatemala
+📌 **Course:** CC3067 – Computer Networks
