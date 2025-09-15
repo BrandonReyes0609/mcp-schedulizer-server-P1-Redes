@@ -1,6 +1,6 @@
 # 🤖 Project 1 Networks (Schedulizer Server)
 
-[README (ESPAÑOL) -&gt; docs\README_EJECUCION_ES.md](docs\README_EJECUCION_ES.md)
+[README (ESPAÑOL) -&gt; docs\README_EJECUCION_ES.md](docs/README_EJECUCION_ES.md)
 
 This document describes the operation of the host agent developed for **Project 1 - Use of an existing protocol (CC3067)**, which uses an **LLM (Claude)** to interpret natural language instructions and execute tools through a **local MCP server** compatible with the official protocol.
 
